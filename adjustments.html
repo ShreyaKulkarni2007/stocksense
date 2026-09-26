@@ -16,6 +16,7 @@
       <a href="delivery.html" class="btn btn-outline-light btn-sm me-2">Delivery</a>
       <a href="transfers.html" class="btn btn-outline-light btn-sm me-2">Transfers</a>
       <a href="adjustments.html" class="btn btn-light btn-sm me-2">Adjustments</a>
+      <a href="ledger.html" class="btn btn-outline-light btn-sm me-2">Ledger</a>
       <button id="logoutBtn" class="btn btn-outline-danger btn-sm">Logout</button>
     </div>
   </nav>
@@ -160,6 +161,18 @@
           product_name: productData.product_name,
           previous_qty: previousQty,
           counted_qty: countedQty,
+          created_at: new Date().toISOString()
+        });
+
+        // Log to the shared stock ledger
+        await addDoc(collection(db, "stock_ledger"), {
+          type: "Adjustment",
+          product_id: productId,
+          product_name: productData.product_name,
+          change: countedQty - previousQty,
+          previous_qty: previousQty,
+          new_qty: countedQty,
+          details: `Counted quantity update (was ${previousQty}, now ${countedQty})`,
           created_at: new Date().toISOString()
         });
 
