@@ -72,7 +72,8 @@
       getDocs,
       doc,
       getDoc,
-      updateDoc
+      updateDoc,
+      runTransaction
     } from "./firebase-config.js";
 
     onAuthStateChanged(auth, (user) => {
@@ -138,31 +139,36 @@
 
       try {
         const productRef = doc(db, "products", productId);
-        const productSnap = await getDoc(productRef);
-        const productData = productSnap.data();
-        const currentStock = productData.stock_qty ?? 0;
+        let productName = "";
+        let newStock = 0;
 
-        if (quantity > currentStock) {
-          statusMsg.textContent = `Not enough stock. Available: ${currentStock}.`;
-          statusMsg.className = "mt-2 mb-0 text-danger";
-          return;
-        }
+        // Transaction: read + check + write happen atomically,
+        // so two deliveries can't both pass the stock check and oversell
+        await runTransaction(db, async (transaction) => {
+          const productSnap = await transaction.get(productRef);
+          const productData = productSnap.data();
+          const currentStock = productData.stock_qty ?? 0;
 
-        // Decrease stock
-        await updateDoc(productRef, {
-          stock_qty: currentStock - quantity
+          if (quantity > currentStock) {
+            throw new Error(`Not enough stock. Available: ${currentStock}.`);
+          }
+
+          newStock = currentStock - quantity;
+          productName = productData.product_name;
+
+          transaction.update(productRef, { stock_qty: newStock });
         });
 
         // Log the delivery
         await addDoc(collection(db, "deliveries"), {
           product_id: productId,
-          product_name: productData.product_name,
+          product_name: productName,
           customer,
           quantity,
           created_at: new Date().toISOString()
         });
 
-        statusMsg.textContent = `Stock updated: ${productData.product_name} is now ${currentStock - quantity}.`;
+        statusMsg.textContent = `Stock updated: ${productName} is now ${newStock}.`;
         statusMsg.className = "mt-2 mb-0 text-success";
 
         document.getElementById("customer").value = "";
