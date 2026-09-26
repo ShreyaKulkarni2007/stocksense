@@ -72,7 +72,8 @@
       getDocs,
       doc,
       getDoc,
-      updateDoc
+      updateDoc,
+      increment
     } from "./firebase-config.js";
 
     onAuthStateChanged(auth, (user) => {
@@ -137,15 +138,14 @@
       }
 
       try {
-        // Get current product data
+        // Get product name for logging (read-only, not used for the math)
         const productRef = doc(db, "products", productId);
         const productSnap = await getDoc(productRef);
         const productData = productSnap.data();
-        const currentStock = productData.stock_qty ?? 0;
 
-        // Increase stock
+        // Atomically increase stock — safe even if another update happens at the same time
         await updateDoc(productRef, {
-          stock_qty: currentStock + quantity
+          stock_qty: increment(quantity)
         });
 
         // Log the receipt
@@ -157,7 +157,7 @@
           created_at: new Date().toISOString()
         });
 
-        statusMsg.textContent = `Stock updated: ${productData.product_name} is now ${currentStock + quantity}.`;
+        statusMsg.textContent = `Receipt validated: +${quantity} ${productData.product_name}.`;
         statusMsg.className = "mt-2 mb-0 text-success";
 
         document.getElementById("supplier").value = "";
