@@ -18,7 +18,9 @@ import {
   updateDoc,
   getDoc,
   query,
-  where
+  where,
+  increment,
+  runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -48,5 +50,7 @@ export {
   updateDoc,
   getDoc,
   query,
-  where
+  where,
+  increment,
+  runTransaction
 };
