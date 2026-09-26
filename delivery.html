@@ -17,6 +17,7 @@
       <a href="delivery.html" class="btn btn-light btn-sm me-2">Delivery</a>
       <a href="transfers.html" class="btn btn-outline-light btn-sm me-2">Transfers</a>
       <a href="adjustments.html" class="btn btn-outline-light btn-sm me-2">Adjustments</a>
+      <a href="ledger.html" class="btn btn-outline-light btn-sm me-2">Ledger</a>
       <button id="logoutBtn" class="btn btn-outline-danger btn-sm">Logout</button>
     </div>
   </nav>
@@ -142,6 +143,7 @@
       try {
         const productRef = doc(db, "products", productId);
         let productName = "";
+        let previousStock = 0;
         let newStock = 0;
 
         // Transaction: read + check + write happen atomically,
@@ -155,6 +157,7 @@
             throw new Error(`Not enough stock. Available: ${currentStock}.`);
           }
 
+          previousStock = currentStock;
           newStock = currentStock - quantity;
           productName = productData.product_name;
 
@@ -167,6 +170,18 @@
           product_name: productName,
           customer,
           quantity,
+          created_at: new Date().toISOString()
+        });
+
+        // Log to the shared stock ledger
+        await addDoc(collection(db, "stock_ledger"), {
+          type: "Delivery",
+          product_id: productId,
+          product_name: productName,
+          change: -quantity,
+          previous_qty: previousStock,
+          new_qty: newStock,
+          details: `Delivered to ${customer || "customer"}`,
           created_at: new Date().toISOString()
         });
 
