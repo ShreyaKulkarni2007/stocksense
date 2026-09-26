@@ -17,6 +17,7 @@
       <a href="delivery.html" class="btn btn-outline-light btn-sm me-2">Delivery</a>
       <a href="transfers.html" class="btn btn-outline-light btn-sm me-2">Transfers</a>
       <a href="adjustments.html" class="btn btn-outline-light btn-sm me-2">Adjustments</a>
+      <a href="ledger.html" class="btn btn-outline-light btn-sm me-2">Ledger</a>
       <button id="logoutBtn" class="btn btn-outline-danger btn-sm">Logout</button>
     </div>
   </nav>
@@ -144,6 +145,7 @@
         const productRef = doc(db, "products", productId);
         const productSnap = await getDoc(productRef);
         const productData = productSnap.data();
+        const previousQty = productData.stock_qty ?? 0;
 
         // Atomically increase stock — safe even if another update happens at the same time
         await updateDoc(productRef, {
@@ -156,6 +158,18 @@
           product_name: productData.product_name,
           supplier,
           quantity,
+          created_at: new Date().toISOString()
+        });
+
+        // Log to the shared stock ledger
+        await addDoc(collection(db, "stock_ledger"), {
+          type: "Receipt",
+          product_id: productId,
+          product_name: productData.product_name,
+          change: quantity,
+          previous_qty: previousQty,
+          new_qty: previousQty + quantity,
+          details: `Received from ${supplier || "supplier"}`,
           created_at: new Date().toISOString()
         });
 
