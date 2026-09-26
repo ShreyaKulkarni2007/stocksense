@@ -25,6 +25,8 @@
     <h3 class="mb-2">Stock Ledger</h3>
     <p class="text-muted">A complete, unified log of every stock-affecting action across the system — receipts, deliveries, transfers, and adjustments.</p>
 
+    <button id="exportCsvBtn" class="btn btn-outline-primary btn-sm mb-3">Download CSV</button>
+
     <div class="card shadow-sm p-3">
       <table class="table table-hover">
         <thead>
@@ -81,6 +83,7 @@
       const entries = [];
       snap.forEach((docSnap) => entries.push(docSnap.data()));
       entries.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      window._ledgerEntries = entries; // cached for CSV export
 
       tbody.innerHTML = "";
       entries.forEach((e) => {
@@ -100,6 +103,37 @@
         tbody.appendChild(row);
       });
     }
+
+    function downloadCsv() {
+      const entries = window._ledgerEntries ?? [];
+      if (entries.length === 0) {
+        alert("No ledger entries to export yet.");
+        return;
+      }
+
+      const header = ["Type", "Product", "Change", "Details", "Date"];
+      const escapeCsv = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
+      const rows = entries.map((e) => [
+        e.type ?? "",
+        e.product_name ?? "",
+        e.change ?? 0,
+        e.details ?? "",
+        e.created_at ? new Date(e.created_at).toLocaleString() : ""
+      ].map(escapeCsv).join(","));
+
+      const csvContent = [header.map(escapeCsv).join(","), ...rows].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `stock_ledger_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById("exportCsvBtn").addEventListener("click", downloadCsv);
 
     loadLedger();
   </script>
